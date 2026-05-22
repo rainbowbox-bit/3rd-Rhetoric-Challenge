@@ -1,0 +1,1768 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>國小修辭大挑戰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f0fdf4; /* Light green background */
+            background-image: radial-gradient(#bbf7d0 2px, transparent 2px);
+            background-size: 30px 30px;
+        }
+        .bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in forwards;
+        }
+        @keyframes fadeIn {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+<div id="app" class="w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden border-4 border-green-400 relative">
+    
+    <!-- Start Screen -->
+    <div id="start-screen" class="p-10 text-center flex flex-col items-center justify-center h-full fade-in">
+        <div class="text-6xl mb-4">🏆</div>
+        <h1 class="text-4xl md:text-5xl font-black text-green-600 mb-4 tracking-wider">修辭大挑戰</h1>
+        <p class="text-lg text-gray-600 mb-8 font-bold">每次隨機挑選 10 題，看看你能拿幾分！</p>
+        <button onclick="startGame()" class="bg-green-500 hover:bg-green-600 text-white font-bold text-2xl py-4 px-12 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">
+            開始挑戰！
+        </button>
+        <p class="mt-6 text-sm text-gray-400">背景題庫目前收錄：<span id="pool-size" class="font-bold text-green-500"></span> 題</p>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="hidden flex flex-col h-full fade-in">
+        <!-- Header / Progress -->
+        <div class="bg-green-500 p-4 text-white flex justify-between items-center shadow-md">
+            <div class="font-bold text-lg">第 <span id="current-question-num">1</span> / 10 題</div>
+            <div class="font-bold text-lg">分數：<span id="score-display">0</span></div>
+        </div>
+        <div class="w-full bg-green-200 h-2">
+            <div id="progress-bar" class="bg-yellow-400 h-2 transition-all duration-300" style="width: 10%;"></div>
+        </div>
+
+        <div class="p-6 md:p-8 flex-grow flex flex-col">
+            <!-- Question -->
+            <div class="mb-6">
+                <h2 id="question-text" class="text-2xl md:text-3xl font-bold text-gray-800 leading-snug"></h2>
+            </div>
+
+            <!-- Hint Button & Text -->
+            <div class="mb-6">
+                <button onclick="toggleHint()" class="text-yellow-600 font-bold bg-yellow-100 hover:bg-yellow-200 px-4 py-2 rounded-full flex items-center transition text-sm">
+                    💡 點我看小提示
+                </button>
+                <div id="hint-text" class="hidden mt-3 p-3 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold border border-blue-200"></div>
+            </div>
+
+            <!-- Options -->
+            <div id="options-container" class="space-y-3 flex-grow">
+                <!-- Options injected via JS -->
+            </div>
+
+            <!-- Feedback / Rationale Area -->
+            <div id="feedback-area" class="hidden mt-6 p-4 rounded-2xl bounce-in">
+                <div class="flex items-center mb-2">
+                    <span id="feedback-icon" class="text-3xl mr-3"></span>
+                    <h3 id="feedback-title" class="text-xl font-black"></h3>
+                </div>
+                <p id="feedback-rationale" class="text-gray-700 font-bold mb-4"></p>
+                <button onclick="nextQuestion()" id="next-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl transition transform active:scale-95 text-lg">
+                    下一題 ➡️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="hidden p-10 text-center flex flex-col items-center justify-center h-full fade-in">
+        <div id="result-emoji" class="text-7xl mb-4 bounce-in"></div>
+        <h2 class="text-4xl font-black text-gray-800 mb-2">挑戰結束！</h2>
+        <p class="text-2xl text-gray-600 mb-6 font-bold">你的得分是：</p>
+        <div class="text-6xl font-black text-green-500 mb-8" id="final-score"></div>
+        <p id="result-message" class="text-xl font-bold text-blue-600 mb-8"></p>
+        <button onclick="resetGame()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-black text-2xl py-4 px-12 rounded-full shadow-lg transform transition hover:scale-105 active:scale-95">
+            再來玩一次！
+        </button>
+    </div>
+
+</div>
+
+<script>
+    // 這就是背景大題庫！目前有 33 題。您可以隨時在這裡複製貼上，增加到 200 題。
+    const questionPool = [
+        // --- 轉化 ---
+        {
+            q: "「春風溫柔地撫摸著小草的臉頰，叫醒了沉睡的花朵。」請問這句話使用了哪一種修辭法？",
+            hint: "想想看，風和花朵真的有臉頰而且會睡覺嗎？是不是把它們當成「人」來寫了呢？",
+            options: [
+                { text: "轉化（擬人）", isCorrect: true, rationale: "把春風當成有手可以「撫摸」，花朵當成會「沉睡」的人，這就是擬人法。" },
+                { text: "譬喻", isCorrect: false, rationale: "句子裡沒有出現「像」、「彷彿」等打比方的字眼。" },
+                { text: "誇飾", isCorrect: false, rationale: "並沒有把事實故意放大或縮小。" },
+                { text: "設問", isCorrect: false, rationale: "這是一個直述句，沒有提出問題。" }
+            ]
+        },
+        {
+            q: "「下課鐘聲一響，快樂就在校園裡長出了翅膀，四處飛翔。」這句話主要運用了什麼修辭？",
+            hint: "快樂是一種感覺，感覺會「長出翅膀」飛翔嗎？",
+            options: [
+                { text: "譬喻", isCorrect: false, rationale: "沒有用「像」把快樂比喻成什麼。" },
+                { text: "轉化（擬物）", isCorrect: true, rationale: "把看不見的「快樂」情緒，當作有翅膀的鳥類（具體事物）來描寫。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的詞語來代替快樂。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有使用強烈的驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「早上的鬧鐘總是在床頭對著我大吼大叫，逼我起床。」這句話用了哪種修辭？",
+            hint: "鬧鐘真的有嘴巴可以「大吼大叫」嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把鬧鐘鈴響的聲音，當作人在「大吼大叫」，賦予了人的動作。" },
+                { text: "誇飾", isCorrect: false, rationale: "重點在於把物品當作人，而不是放大聲音的音量。" },
+                { text: "摹寫", isCorrect: false, rationale: "雖然有聲音，但主要技巧是把鬧鐘當作人。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏其他的字義。" }
+            ]
+        },
+        // --- 譬喻 ---
+        {
+            q: "「天上的白雲就像一團團柔軟的棉花糖，讓人好想咬一口。」這句話用了什麼修辭？",
+            hint: "句子裡出現了「就像」這個詞，作者把白雲當作什麼東西了呢？",
+            options: [
+                { text: "借代", isCorrect: false, rationale: "並沒有用其他特徵來替代白雲。" },
+                { text: "譬喻", isCorrect: true, rationale: "用了「就像」這個關鍵字，把白雲比方成棉花糖。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有故意說反話。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有使用驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「大隊接力時，班長跑得像一陣風一樣，咻一下就衝過終點。」這句話主要用了哪種修辭？",
+            hint: "班長跑得「像」什麼？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用「像...一樣」，把班長跑步的速度比喻成一陣風。" },
+                { text: "擬人", isCorrect: false, rationale: "班長本來就是人，所以不是擬人。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比的現象。" }
+            ]
+        },
+        {
+            q: "「妹妹生氣時，眉毛皺得彷彿兩條毛毛蟲在打架。」這句話用了什麼修辭？",
+            hint: "看到了「彷彿」這個詞嗎？它跟「像」是同樣的意思喔！",
+            options: [
+                { text: "借代", isCorrect: false, rationale: "沒有用毛毛蟲來替代眉毛的名稱。" },
+                { text: "譬喻", isCorrect: true, rationale: "用「彷彿」將皺在一起的眉毛打比方成毛毛蟲。" },
+                { text: "雙關", isCorrect: false, rationale: "文字沒有兩種意思。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有連續重複相同的字詞。" }
+            ]
+        },
+        // --- 摹寫 ---
+        {
+            q: "「下課鐘聲『噹！噹！噹！』的響起，操場上傳來小朋友的笑聲。」請問這裡主要用了哪種修辭？",
+            hint: "閉上眼睛唸一下這句話，是不是特別描寫了耳朵「聽」到的聲音呢？",
+            options: [
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字的趣味。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有把相反的事物放在一起對比。" },
+                { text: "摹寫", isCorrect: true, rationale: "特別把耳朵聽到的噹噹聲用文字寫出來，是聽覺摹寫。" },
+                { text: "誇飾", isCorrect: false, rationale: "鐘聲和笑聲都是真實的，沒有誇大。" }
+            ]
+        },
+        {
+            q: "「剛出爐的烤地瓜散發著濃濃的焦糖香味，讓人忍不住直流口水。」這句話運用了哪種修辭？",
+            hint: "「濃濃的焦糖香味」是身體的哪個器官感覺到的呢？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把鼻子聞到的香味用文字具體形容出來，這是嗅覺摹寫。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說地瓜像什麼東西。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把地瓜當作人。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有使用感嘆語氣。" }
+            ]
+        },
+        {
+            q: "「這塊岩石摸起來十分粗糙，上面還有許多刺刺的小顆粒。」這句話使用了哪種修辭？",
+            hint: "「粗糙」、「刺刺的」是用身體哪個部位去感受的呢？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把皮膚觸碰到的感覺描寫出來，屬於觸覺摹寫。" },
+                { text: "誇飾", isCorrect: false, rationale: "真實描述岩石的狀態，沒有誇大。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" },
+                { text: "借代", isCorrect: false, rationale: "直接說出了岩石，沒有用別的詞代替。" }
+            ]
+        },
+        // --- 誇飾 ---
+        {
+            q: "「哥哥跑步的速度快得像閃電一樣，一眨眼就不見了！」這句話使用了哪種修辭法？",
+            hint: "人類真的能跑得跟天上打雷的「閃電」一樣快嗎？",
+            options: [
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" },
+                { text: "誇飾", isCorrect: true, rationale: "人的速度不可能像閃電，這是故意放大事實來強調速度極快。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的名稱來代替哥哥。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「今天天氣真熱，外面的太陽簡直可以把生雞蛋煎熟了！」這句話主要用了哪一種修辭？",
+            hint: "地上的柏油路真的熱到能「煎熟生雞蛋」嗎？是不是形容得太誇張了？",
+            options: [
+                { text: "摹寫", isCorrect: false, rationale: "雖然有熱的感覺，但煎雞蛋是為了強調熱度而做的誇張形容。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把太陽當作人。" },
+                { text: "誇飾", isCorrect: true, rationale: "故意放大天氣炎熱的程度，讓人印象深刻。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有重複的字詞。" }
+            ]
+        },
+        {
+            q: "「這間教室安靜得連一根針掉在地上都聽得見。」這句話用了什麼修辭？",
+            hint: "教室真的有可能安靜到聽見一根小小的針掉下去嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意用極端微小的聲音來反向強調教室非常非常安靜。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有將吵鬧和安靜對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重字義。" }
+            ]
+        },
+        // --- 類疊 ---
+        {
+            q: "「一隻一隻的蝴蝶在花叢裡飛來飛去，好不快樂。」這句話使用了哪種修辭？",
+            hint: "注意看看句子裡面，「一隻」跟「飛」是不是連續出現了好幾次呢？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "「一隻一隻」、「飛來飛去」都是把同一個字或詞語接連重複使用。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重意思。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有強烈的感嘆詞。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的事物作對比。" }
+            ]
+        },
+        {
+            q: "「妹妹高高興興的穿著新衣服，準備出門去玩。」這句話中的「高高興興」運用了什麼修辭？",
+            hint: "原本是「高興」，變成了「高高興興」，字是不是重複了？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "將「高興」的字疊在一起用，增加語氣的節奏感。" },
+                { text: "誇飾", isCorrect: false, rationale: "只是很開心，沒有誇大。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把物品擬人化。" },
+                { text: "摹寫", isCorrect: false, rationale: "高興是情緒，不是五官的感官描寫。" }
+            ]
+        },
+        {
+            q: "「窗外的雨滴滴答答的下著，好像在唱歌。」這句話的「滴滴答答」用了哪種修辭？",
+            hint: "「滴」和「答」兩個字是不是重複出現了呢？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "重複使用「滴」和「答」字，讀起來很有聲音的節奏感。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用其他詞代替雨。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        // --- 設問 ---
+        {
+            q: "「是誰把教室打掃得這麼乾淨呢？原來是值日生小明啊！」這句話用了什麼修辭？",
+            hint: "句子裡有一個大大的「問號」，而且還自己回答了這個問題喔！",
+            options: [
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人或擬物。" },
+                { text: "摹寫", isCorrect: false, rationale: "重點在於一問一答的句型。" },
+                { text: "設問", isCorrect: true, rationale: "故意先提出問題引起注意，然後自己回答答案，這是自問自答的設問。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏的字義。" }
+            ]
+        },
+        {
+            q: "「努力學習難道不是每個學生應該做的事嗎？」這句話運用了哪種修辭？",
+            hint: "雖然是一個問號結尾，但其實答案已經很明顯在句子裡了！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "故意用疑問的語氣來表達肯定的意思（激問法），讓語氣更強烈。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "倒反", isCorrect: false, rationale: "並不是在說反話，而是用問句加強語氣。" }
+            ]
+        },
+        {
+            q: "「這世界上最美麗的風景是什麼？」這句話主要運用了什麼修辭？",
+            hint: "句子提出了一個問題讓大家去思考，這是哪一種寫作技巧？",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "心中有疑問而提出問題，雖然沒有給答案（懸問），但也屬於設問法。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" }
+            ]
+        },
+        // --- 映襯 ---
+        {
+            q: "「弟弟的房間亂得像狗窩，姐姐的房間卻乾淨得一塵不染。」這句話主要使用了哪種修辭法？",
+            hint: "看看句子的前半部和後半部，是不是把「亂」和「乾淨」兩種相反的情況對比了？",
+            options: [
+                { text: "類疊", isCorrect: false, rationale: "沒有連續重複的字詞。" },
+                { text: "映襯", isCorrect: true, rationale: "把弟弟的「亂」跟姐姐的「乾淨」兩種相反狀況擺在一起比較。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" },
+                { text: "倒反", isCorrect: false, rationale: "真實描寫兩個房間的狀況，沒有說反話。" }
+            ]
+        },
+        {
+            q: "「雖然外面正下著冰冷的寒雨，我的心裡卻覺得十分溫暖。」這句話用了什麼修辭？",
+            hint: "外面的「冰冷」和心裡的「溫暖」是不是剛好相反呢？",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "把天氣的冷和內心的暖這兩種相對的感覺放在一起對比。" },
+                { text: "摹寫", isCorrect: false, rationale: "重點在於對比，而不是單純形容觸覺。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重字義。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把事物當作人。" }
+            ]
+        },
+        {
+            q: "「這顆蘋果看起來外表紅潤漂亮，吃起來卻酸得讓人皺眉頭。」運用了哪種修辭？",
+            hint: "外表的「漂亮」跟吃起來的「酸澀」產生了很大的反差！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將外表的好看與味道的不好吃進行對比。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說蘋果像什麼。" },
+                { text: "誇飾", isCorrect: false, rationale: "只是真實形容酸的感覺，沒有過度誇大。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        // --- 雙關 ---
+        {
+            q: "「過年的時候，媽媽端出一盤魚，說這代表『年年有魚』喔！」這句話的「魚」運用了哪種修辭？",
+            hint: "「魚」的發音，是不是跟另一個代表「多出來、有剩下」的字一模一樣呢？",
+            options: [
+                { text: "借代", isCorrect: false, rationale: "不是用魚代替別的東西。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "譬喻", isCorrect: false, rationale: "不是打比方。" },
+                { text: "雙關", isCorrect: true, rationale: "「魚」和代表剩下、有財富的「餘」字發音一樣，一句話同時有兩種意思。" }
+            ]
+        },
+        {
+            q: "「老闆送我一盒步步高『糕』，祝我考試順利。」這裡的「糕」用了什麼修辭？",
+            hint: "「糕」的發音跟步步高「升」的哪一個字同音呢？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用蛋糕的「糕」和升高的「升」發音相近，給予祝福。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「中秋節吃柚子，希望能保『佑』我們全家平安。」這裡的柚子運用了什麼修辭？",
+            hint: "「柚」子的發音跟保「佑」是不是很像呢？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用「柚」和保「佑」的諧音，讓水果有了吉祥的意思。" },
+                { text: "借代", isCorrect: false, rationale: "不是用柚子代替神明。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        // --- 感嘆 ---
+        {
+            q: "「哇！這座遊樂園的雲霄飛車也太高、太可怕了吧！」這句話用了什麼修辭？",
+            hint: "句子開頭有一個情緒很滿的字，把心裡的驚訝大聲喊出來了喔！",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "用了驚嘆詞「哇！」，強烈表達出驚訝的情緒。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用其他名稱代替。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的覺得可怕，沒有說反話。" },
+                { text: "摹寫", isCorrect: false, rationale: "主要是抒發情緒，不是細膩描寫。" }
+            ]
+        },
+        {
+            q: "「唉！今天的數學小考我又粗心算錯了。」這句話運用了哪種修辭？",
+            hint: "「唉！」這個字表達了什麼樣的心情呢？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "運用「唉！」這個感嘆詞，表達內心懊悔、無奈的情緒。" },
+                { text: "設問", isCorrect: false, rationale: "這不是問句。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" }
+            ]
+        },
+        {
+            q: "「啊！這片花海真是太美麗了！」這句話使用了哪種修辭？",
+            hint: "看到美麗的風景時，忍不住發出的讚嘆聲屬於哪種修辭？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "用「啊！」直接抒發內心強烈的讚美之情。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說花海像什麼。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重字義。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        // --- 倒反 ---
+        {
+            q: "「你打破了媽媽最心愛的花瓶，這下子你可真是『立了大功』啊！」這句話使用了哪種修辭法？",
+            hint: "打破花瓶明明是做錯事，怎麼會是「立大功」呢？是不是故意說反話來表達生氣？",
+            options: [
+                { text: "誇飾", isCorrect: false, rationale: "打破花瓶不是放大事實，是用相反的詞來責備。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有連續出現重複的字詞。" },
+                { text: "倒反", isCorrect: true, rationale: "做錯事卻故意說「立大功」，這種故意說反話的方式就是倒反。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把花瓶當作人。" }
+            ]
+        },
+        {
+            q: "「你看你考這什麼零分的分數，真是個『天才』！」這句話用了什麼修辭？",
+            hint: "考零分卻被叫天才，這是在稱讚還是在諷刺呢？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "明明是想責備成績不好，卻故意用稱讚的「天才」來說反話諷刺。" },
+                { text: "譬喻", isCorrect: false, rationale: "不是打比方。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用天才代替他的名字。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" }
+            ]
+        },
+        {
+            q: "「大家都在等你一個人，你還真是『準時』啊！」這句話運用了哪種修辭？",
+            hint: "別人都等很久了，代表他遲到了，卻說他「準時」？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "對於遲到的人故意稱讚他「準時」，表達不滿與諷刺。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比的句型。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有強烈的驚嘆詞。" }
+            ]
+        },
+        // --- 借代 ---
+        {
+            q: "「每次看到那個大大的M標誌，我就知道『麥當勞叔叔』在呼喚我了！」這句話的「麥當勞叔叔」運用了哪種修辭？",
+            hint: "「麥當勞叔叔」其實是指哪一家餐廳呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用招牌人物「麥當勞叔叔」來代替「麥當勞餐廳」這個地方。" },
+                { text: "轉化", isCorrect: false, rationale: "雖然有呼喚的動作，但核心修辭是用人物代替整間餐廳。" },
+                { text: "譬喻", isCorrect: false, rationale: "不是說餐廳像麥當勞叔叔。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" }
+            ]
+        },
+        {
+            q: "「醫院裡有一群忙碌的『白衣天使』，正在細心的照顧病人。」這裡的白衣天使運用了什麼修辭？",
+            hint: "穿著白衣服照顧病人的人是誰呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用穿著白色制服的特徵，來代替「護理師（護士）」這個職業名稱。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重字義。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" }
+            ]
+        },
+        {
+            q: "「昨晚那場無情的大火，讓許多人的家園被『祝融』吞噬了。」這裡的祝融用了哪種修辭？",
+            hint: "「祝融」是古代神話裡的火神，在這裡代表了什麼災難？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用火神的名字「祝融」來代替「火災」。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        // === 全新擴充的 55 題背景題庫 ===
+        // --- 轉化 ---
+        {
+            q: "「牽牛花每天早晨都會吹起紫色的小喇叭，叫大家起床。」這句話使用了哪一種修辭？",
+            hint: "牽牛花真的會「吹喇叭」和「叫大家起床」嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把牽牛花開花的樣子當作人在吹喇叭，賦予了人類的動作。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大牽牛花的大小或聲音。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用其他名詞代替牽牛花。" },
+                { text: "設問", isCorrect: false, rationale: "這不是一個問句。" }
+            ]
+        },
+        {
+            q: "「頑皮的風弟弟，趁我不注意時把我的帽子搶走了。」這句話運用了什麼修辭？",
+            hint: "風有手可以「搶」東西嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把風擬人化成頑皮的弟弟，還會做「搶」的動作。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有使用「像」或「彷彿」。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字的意思。" }
+            ]
+        },
+        {
+            q: "「小雨滴在屋頂上溜滑梯，玩得好開心。」這句話主要運用了什麼修辭？",
+            hint: "雨滴真的會玩「溜滑梯」嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把雨水滑落的樣子，當作小朋友在溜滑梯玩耍。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有連續重複的疊字。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有強烈的驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「夜晚的星星在天空眨著眼睛，偷偷看著我們。」這句話用了哪種修辭？",
+            hint: "星星一閃一閃的樣子，被當成了什麼動作？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把星星閃爍當作人類在「眨眼睛」和「偷看」。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的詞來代替星星。" },
+                { text: "誇飾", isCorrect: false, rationale: "這是一種擬人想像，不是誇大。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" }
+            ]
+        },
+        {
+            q: "「白雲妹妹穿上最漂亮的白洋裝，在天空中散步。」這句話運用了哪種修辭？",
+            hint: "白雲真的有洋裝可以穿嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "將雲朵擬人化，賦予穿衣服和散步的動作。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方說雲像什麼。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "摹寫", isCorrect: false, rationale: "主要是擬人化的想像，而非單純的視覺形容。" }
+            ]
+        },
+        // --- 譬喻 ---
+        {
+            q: "「彎彎的月亮像一條小船，在星星的大海裡航行。」這句話用了什麼修辭？",
+            hint: "月亮「像」什麼東西呢？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "使用了「像」，把彎月比方成小船。" },
+                { text: "類疊", isCorrect: false, rationale: "雖然有「彎彎」，但整個句子的核心技巧是打比方。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重含義。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆語氣。" }
+            ]
+        },
+        {
+            q: "「妹妹的眼睛水汪汪的，彷彿兩顆閃亮的黑珍珠。」這句話使用了哪種修辭？",
+            hint: "「彷彿」就是好像的意思喔！",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用「彷彿」把眼睛比喻成黑珍珠。" },
+                { text: "借代", isCorrect: false, rationale: "不是用黑珍珠代替眼睛，而是進行比喻。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" }
+            ]
+        },
+        {
+            q: "「老師的愛心就像溫暖的陽光，照亮了我們。」這句話運用了什麼修辭？",
+            hint: "老師的愛心被當作什麼了？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用「就像」把無形的愛心比方成溫暖的陽光。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把愛心當作人來寫。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比的現象。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「時間是一去不回頭的流水，我們一定要好好珍惜。」這句話主要用了哪種修辭？",
+            hint: "雖然沒有『像』字，但是說『時間是流水』，這是哪一種修辭的變形呢？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "這是譬喻中的「暗喻」，用「是」來把時間比喻成流水。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇張形容。" },
+                { text: "借代", isCorrect: false, rationale: "不是代替，是比喻。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字的趣味。" }
+            ]
+        },
+        {
+            q: "「滿頭的大汗像斷了線的珍珠一樣，不斷從他的額頭滑落。」這句話用了什麼修辭？",
+            hint: "汗水「像」什麼東西掉下來？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "把大顆的汗水比喻成斷線掉落的珍珠。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有表達感嘆情緒。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出疑問。" }
+            ]
+        },
+        // --- 摹寫 ---
+        {
+            q: "「夕陽把遠方的天空染成了漸層的橘紅色，美麗極了。」這句話使用了哪種修辭？",
+            hint: "「橘紅色」是用身體的哪裡感受到的呢？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把眼睛看到的顏色具體描寫出來，是視覺摹寫。" },
+                { text: "聽覺", isCorrect: false, rationale: "沒有描寫聲音。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的覺得美麗，沒有說反話。" }
+            ]
+        },
+        {
+            q: "「森林裡傳來小鳥『啾啾啾』的清脆歌聲。」這句話運用了哪種修辭？",
+            hint: "「啾啾啾」是什麼器官感覺到的呢？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "將耳朵聽到的鳥叫聲用文字表達，是聽覺摹寫。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "誇飾", isCorrect: false, rationale: "真實的聲音描寫，沒有誇大。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" }
+            ]
+        },
+        {
+            q: "「廚房裡飄出一陣陣香噴噴的烤麵包味，讓我肚子都餓了。」這句話使用了哪種修辭？",
+            hint: "「香噴噴」是用什麼器官去感受的？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把鼻子聞到的香味描寫出來，屬於嗅覺摹寫。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" }
+            ]
+        },
+        {
+            q: "「這顆檸檬吃起來酸溜溜的，讓我不禁瞇起了眼睛。」這句話運用了什麼修辭？",
+            hint: "「酸溜溜」是舌頭嚐到的味道喔！",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把舌頭嚐到的味道寫出來，是味覺摹寫。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把檸檬當作人。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" },
+                { text: "類疊", isCorrect: false, rationale: "雖然有溜溜，但重點是味覺的具體形容。" }
+            ]
+        },
+        {
+            q: "「剛洗完澡的小狗，身上的毛摸起來軟綿綿的。」這句話主要用了哪種修辭？",
+            hint: "「軟綿綿」是用身體的皮膚去觸碰才感覺到的！",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把皮膚觸碰到的感覺描寫出來，屬於觸覺摹寫。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說小狗像棉花糖。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "借代", isCorrect: false, rationale: "直接說出了小狗的毛。" }
+            ]
+        },
+        // --- 誇飾 ---
+        {
+            q: "「我現在肚子餓得可以吃下一整頭牛！」這句話使用了哪種修辭法？",
+            hint: "人的胃真的裝得下一整頭牛嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意放大事實，用來強調肚子非常餓的程度。" },
+                { text: "譬喻", isCorrect: false, rationale: "不是說肚子像牛。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" }
+            ]
+        },
+        {
+            q: "「他講的笑話太搞笑了，讓大家笑破了肚皮。」這句話運用了哪種修辭？",
+            hint: "笑得再開心，肚皮真的會破掉嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "用「笑破肚皮」這種極度誇張的形容，來表達笑話很好笑。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的名詞代替。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重字義。" }
+            ]
+        },
+        {
+            q: "「下課時，教室裡吵得連屋頂都要掀開了！」這句話用了什麼修辭？",
+            hint: "聲音真的有強大到可以把屋頂掀開嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意把音量放大多倍，強調教室非常吵鬧。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的覺得很吵，沒有說反話。" },
+                { text: "感嘆", isCorrect: false, rationale: "雖然有驚嘆號，但核心技巧是誇大的內容。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        {
+            q: "「弟弟心愛的玩具不見了，哭得眼淚流成了一座汪洋大海。」這句話主要運用了什麼修辭？",
+            hint: "一個人的眼淚有可能流成一片大海嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "把眼淚的數量誇張化，用來強調弟弟極度傷心的情緒。" },
+                { text: "摹寫", isCorrect: false, rationale: "這不是真實的視覺畫面，而是誇大的想像。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" }
+            ]
+        },
+        {
+            q: "「這個裝滿書的書包重得像一座山，我根本搬不動。」這句話使用了哪種修辭？",
+            hint: "書包再重，也不可能跟一座山的重量一樣吧？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意用山來形容書包的重量，極度誇大事實。" },
+                { text: "設問", isCorrect: false, rationale: "這不是問句。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        // --- 類疊 ---
+        {
+            q: "「草地上開滿了一朵朵紅紅黃黃的小野花。」這句話使用了哪種修辭？",
+            hint: "注意看看「一朵」、「紅」、「黃」這幾個字！",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "「一朵朵」、「紅紅黃黃」都是把同一個字重複使用。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" }
+            ]
+        },
+        {
+            q: "「火車轟隆轟隆的往前開，帶著我們去旅行。」這句話的「轟隆轟隆」運用了什麼修辭？",
+            hint: "「轟隆」是不是連續出現了兩次呢？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "連續使用「轟隆」這個詞，增加聲音的節奏感。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的詞代替火車。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        {
+            q: "「小嬰兒搖搖晃晃地，走出了一步又一步。」這句話主要用了哪種修辭？",
+            hint: "「搖搖晃晃」和「一步又一步」都有重複的字喔！",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "重複使用相同的字詞，讓畫面感更生動。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重字義。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「媽媽輕輕的、柔柔的拍著弟弟，哄他睡覺。」這句話用了什麼修辭？",
+            hint: "「輕輕」、「柔柔」是哪一種修辭技巧呢？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "將字疊在一起用，表現出媽媽動作的輕柔與緩慢。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" }
+            ]
+        },
+        {
+            q: "「我們安安靜靜的坐在圖書館裡看書。」這句話的「安安靜靜」運用了什麼修辭？",
+            hint: "原本是「安靜」，字重複之後變成了什麼修辭？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "把安靜兩個字拆開疊用，加強了沒有聲音的感覺。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" }
+            ]
+        },
+        // --- 設問 ---
+        {
+            q: "「是誰把黑板擦得這麼乾淨？啊，原來是熱心的班長！」這句話用了什麼修辭？",
+            hint: "前面問問題，後面自己回答，這是哪一招呢？",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "自問自答，為了引起大家的注意而故意提問。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "借代", isCorrect: false, rationale: "沒有代替的詞。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「春天到底在哪裡呢？我們一起去公園找找看吧！」這句話運用了哪種修辭？",
+            hint: "句子裡有一個問號來引發好奇心！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "提出一個問題讓讀者去思考，這也是設問的一種。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇張。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        {
+            q: "「隨便浪費食物難道是一件對的事情嗎？」這句話主要運用了什麼修辭？",
+            hint: "這句話的答案很明顯是「錯的」，用問句來加強語氣喔！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "答案已經在問題的反面（激問法），用問號來強調絕對不能浪費食物。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "感嘆", isCorrect: false, rationale: "雖然語氣強，但句型是問句。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" }
+            ]
+        },
+        {
+            q: "「為什麼天空會下雨？因為雲朵裡裝滿了太重的小水滴。」這句話使用了哪種修辭？",
+            hint: "先問為什麼，再給出因為，這是一問一答！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "自己提出疑問，然後接著給出解答。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏字義。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "誇飾", isCorrect: false, rationale: "這是科學事實，沒有誇大。" }
+            ]
+        },
+        {
+            q: "「只要肯努力，有什麼困難是無法克服的呢？」這句話用了什麼修辭？",
+            hint: "這句話其實是在說：只要努力，『沒有』困難不能克服！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "用疑問的語氣來表達肯定的意思，讓語氣更堅定。" },
+                { text: "倒反", isCorrect: false, rationale: "這不是在嘲諷或說反話。" },
+                { text: "摹寫", isCorrect: false, rationale: "這是在講道理，不是感官描寫。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        // --- 映襯 ---
+        {
+            q: "「雖然外面的天氣很冷，我的心裡卻覺得暖呼呼的。」這句話主要使用了哪種修辭法？",
+            hint: "外面的「冷」和心裡的「暖」產生了什麼樣的關係？",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將天氣的寒冷和內心的溫暖這兩種相反的感覺放在一起對比。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "類疊", isCorrect: false, rationale: "雖然有暖呼呼，但核心句型是對比。" }
+            ]
+        },
+        {
+            q: "「哥哥長得高高壯壯的，弟弟卻瘦得像根小竹竿。」這句話用了什麼修辭？",
+            hint: "把兩兄弟的身材擺在一起比較！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "把壯碩的哥哥和瘦小的弟弟放在一起進行強烈的對比。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用其他詞代替。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「城市裡的白天非常熱鬧，夜晚卻顯得很冷清。」這句話運用了哪種修辭？",
+            hint: "白天和夜晚的情況是不是完全相反？",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將熱鬧與冷清兩種截然不同的情境對比出來。" },
+                { text: "誇飾", isCorrect: false, rationale: "真實描述，沒有過度誇大。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" }
+            ]
+        },
+        {
+            q: "「他表面上裝作不在乎，其實心裡非常在意。」這句話主要用了哪種修辭？",
+            hint: "外表的表現跟內心的想法有衝突！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "把外在的假裝和內在的真實感受進行對比。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" }
+            ]
+        },
+        {
+            q: "「這顆糖果看起來很甜，吃進嘴裡卻苦得要命。」這句話使用了哪種修辭法？",
+            hint: "眼睛看到的跟嘴巴吃到的完全不一樣！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將視覺上的甜美和味覺上的苦澀進行強烈對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重字義。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有重複字詞。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" }
+            ]
+        },
+        // --- 雙關 ---
+        {
+            q: "「考試前吃一根蔥，希望能變得更『聰』明。」這句話的蔥運用了哪種修辭？",
+            hint: "「蔥」的發音跟哪個字一樣呢？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用蔬菜「蔥」和「聰」明同音，帶有祈求好運的雙重意思。" },
+                { text: "借代", isCorrect: false, rationale: "不是用蔥代替聰明。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把蔥擬人化。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        {
+            q: "「中秋節吃柚子，希望能保『佑』全家平安。」這裡的柚子用了什麼修辭？",
+            hint: "「柚」子的音跟哪個保平安的字很像？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用「柚」和保「佑」的諧音，讓水果有了吉祥的意思。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" }
+            ]
+        },
+        {
+            q: "「爺爺送我一顆蘋果，祝我『蘋』平安安。」這句話運用了哪種修辭？",
+            hint: "「蘋」果的音跟什麼祝福語一樣？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用「蘋」和「平」安的同音，傳達祝福的心意。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說蘋果像什麼。" },
+                { text: "類疊", isCorrect: false, rationale: "雖然有安安，但核心修辭是利用同音字祈福。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「新店開張，送上一籃『菜頭』，祝老闆好彩頭。」這句話的菜頭用了什麼修辭？",
+            hint: "菜頭（蘿蔔）的台語發音跟好「彩頭」一樣喔！",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用「菜頭」和「彩頭」的諧音，象徵好運氣。" },
+                { text: "借代", isCorrect: false, rationale: "不是用菜頭代替老闆。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把菜頭擬人化。" },
+                { text: "摹寫", isCorrect: false, rationale: "沒有感官描寫。" }
+            ]
+        },
+        {
+            q: "「端午節吃包子和粽子，祝福大家考試都能『包中』。」這句話使用了哪種修辭？",
+            hint: "包子加粽子簡稱「包粽」，聽起來像什麼？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用「包粽」和考試「包中」（一定會考上）的同音雙關。" },
+                { text: "誇飾", isCorrect: false, rationale: "這是一種吉祥話，不是誇張。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+        // --- 感嘆 ---
+        {
+            q: "「哎呀！我不小心把水打翻在作業本上了！」這句話用了什麼修辭？",
+            hint: "「哎呀」表達了什麼樣的心情呢？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "使用了感嘆詞「哎呀」，強烈表達出糟糕、驚慌的情緒。" },
+                { text: "借代", isCorrect: false, rationale: "沒有代替詞。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        {
+            q: "「哇！這座山上的風景真是太美麗了！」這句話運用了哪種修辭？",
+            hint: "看到美麗的風景，忍不住發出讚嘆聲！",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "用「哇！」和驚嘆號，直接抒發內心強烈的讚美之情。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" }
+            ]
+        },
+        {
+            q: "「唉！這場拔河比賽我們最後還是輸了。」這句話主要使用了哪種修辭？",
+            hint: "「唉」這個字聽起來是不是很難過呢？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "運用「唉！」表達出失望、惋惜的強烈情緒。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" }
+            ]
+        },
+        {
+            q: "「哼！你再這樣調皮，我就不跟你玩了！」這句話用了什麼修辭？",
+            hint: "「哼」表示講話的人正在生氣喔！",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "用「哼！」這個感嘆詞來表達不滿和生氣的情緒。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的名稱代替。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的生氣，沒有說反話。" },
+                { text: "摹寫", isCorrect: false, rationale: "這是在發脾氣，不是感官描寫。" }
+            ]
+        },
+        {
+            q: "「噢！原來這題數學是這樣算的啊！」這句話使用了哪種修辭？",
+            hint: "突然想通了，發出了「噢」的聲音！",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "使用「噢！」來表達突然恍然大悟的情緒。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有重複字詞。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重字義。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" }
+            ]
+        },
+        // --- 倒反 ---
+        {
+            q: "「你把房間弄得跟垃圾場一樣，真是個『愛乾淨』的好孩子啊！」這句話使用了哪種修辭法？",
+            hint: "房間像垃圾場，怎麼還會稱讚他愛乾淨呢？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "明明很髒亂，卻故意用「愛乾淨」來諷刺，這就是說反話的倒反法。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "誇飾", isCorrect: false, rationale: "核心修辭在於諷刺的反話。" }
+            ]
+        },
+        {
+            q: "「這次又考了最後一名，你可真是『棒透了』！」這句話用了什麼修辭？",
+            hint: "考最後一名還被說棒透了，這是在稱讚還是生氣？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "心裡其實不滿意，卻故意用稱讚的話語來表達責備。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的詞代替。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有把兩種情況對比。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+        {
+            q: "「讓你幫忙洗碗，結果你打破了三個，真是『幫了大忙』呢！」這句話運用了哪種修辭？",
+            hint: "越幫越忙，卻說幫了大忙，這是在說反話喔！",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "做錯事卻故意說他幫了大忙，語帶諷刺。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "感嘆", isCorrect: false, rationale: "雖然有情緒，但最特別的技巧是反話。" }
+            ]
+        },
+        {
+            q: "「外面下著大雷雨，你竟然說這是『適合郊遊的好天氣』。」這句話主要用了哪種修辭？",
+            hint: "下大雨怎麼可能適合郊遊呢？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "故意把糟糕的天氣說成好天氣，充滿了無奈和挖苦的味道。" },
+                { text: "摹寫", isCorrect: false, rationale: "這不是單純形容天氣，而是抱怨。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把雷雨當作人。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        {
+            q: "「你唱歌的聲音大到鄰居都來抗議了，真是『天籟之音』啊。」這句話使用了哪種修辭？",
+            hint: "天籟之音是指極度好聽的聲音，鄰居抗議代表好聽嗎？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "唱歌難聽吵到人，卻故意用讚美詞『天籟之音』來諷刺。" },
+                { text: "誇飾", isCorrect: false, rationale: "重點在於諷刺，而非放大音量。" },
+                { text: "借代", isCorrect: false, rationale: "不是借代。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" }
+            ]
+        },
+        // --- 借代 ---
+        {
+            q: "「路上的『波麗士大人』正在辛苦地指揮交通。」這句話的『波麗士』運用了哪種修辭？",
+            hint: "指揮交通的人通常是哪個職業呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用警察的英文（Police）音譯『波麗士』，來代替警察這個稱呼。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說警察像什麼。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把物品擬人化。" }
+            ]
+        },
+        {
+            q: "「每天送信來的『綠衣天使』，總是帶著親切的笑容。」這裡的『綠衣天使』用了什麼修辭？",
+            hint: "穿著綠色衣服、每天幫我們送信的人是誰？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用穿著綠色制服的特徵，來代替『郵差』這個職業。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問問題。" }
+            ]
+        },
+        {
+            q: "「我們家最近養了兩隻可愛的『喵星人』。」這句話運用了哪種修辭？",
+            hint: "『喵星人』通常是指哪一種會發出喵喵叫的寵物呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『喵星人』這個網路流行語，來代替『貓咪』。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏字義。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「他是班上的『飛毛腿』，每次大隊接力都跑第一。」這句話的『飛毛腿』用了什麼修辭？",
+            hint: "『飛毛腿』是用來形容哪一種人呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『飛毛腿』來代替『跑得非常快的人』。" },
+                { text: "轉化", isCorrect: false, rationale: "腿沒有變成別的東西。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的跑很快，沒有說反話。" },
+                { text: "摹寫", isCorrect: false, rationale: "這不是感官描寫。" }
+            ]
+        },
+        {
+            q: "「那些在球場上奔跑的『台灣之光』，為國家拿下了金牌。」這句話使用了哪種修辭？",
+            hint: "能在國際上拿下金牌，為國爭光的人是誰？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『台灣之光』來代替這些『傑出的運動員』。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說他們像光。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        // === 第三批擴充的 55 題背景題庫 (總數達到 143 題) ===
+        // --- 轉化 ---
+        {
+            q: "「貪睡蟲爬上了我的眼皮，讓我連眼睛都睜不開。」這句話使用了哪一種修辭？",
+            hint: "「貪睡」是一種感覺，感覺會像蟲一樣「爬」嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把想睡覺的感覺具體化成『蟲』，還會做『爬』的動作。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說像什麼。" }
+            ]
+        },
+        {
+            q: "「路燈盡責地在夜晚為我們指路，照亮回家的方向。」這句話運用了什麼修辭？",
+            hint: "路燈會有責任感，而且會幫忙「指路」嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把路燈當作盡責的人來描寫，賦予人類的行為。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重字義。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「秋風拿著畫筆，把整座森林的樹葉都塗成了紅色。」這句話主要用了哪種修辭？",
+            hint: "風真的有手可以拿畫筆塗色嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把秋風擬人化，變成會拿畫筆畫畫的畫家。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「冰箱大口大口地吞下我們買回來的蔬菜和水果。」這句話用了哪種修辭？",
+            hint: "冰箱有嘴巴可以「吞」東西嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "把冰箱當成會吃東西的動物或人，生動地表達冰東西的動作。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說冰箱像什麼。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "誇飾", isCorrect: false, rationale: "重點在吞的動作，而不是放大事實。" }
+            ]
+        },
+        {
+            q: "「海浪輕輕拍打著沙灘，唱著溫柔的搖籃曲。」這句話使用了哪種修辭？",
+            hint: "海浪真的會拍打和唱歌嗎？",
+            options: [
+                { text: "轉化", isCorrect: true, rationale: "將海浪擬人化，賦予拍打和唱歌的人類動作。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+
+        // --- 譬喻 ---
+        {
+            q: "「剛割過的草地像是一塊綠色的大地毯。」這句話使用了哪一種修辭？",
+            hint: "草地「像」什麼東西呢？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "使用『像是』，把綠油油的草地比喻成地毯。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把草地當作人。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有過度誇大。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        {
+            q: "「天上的煙火宛如一朵朵盛開的鮮花。」這句話運用了什麼修辭？",
+            hint: "「宛如」就跟「好像」是一樣的意思喔！",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用『宛如』把天上的煙火比喻成鮮花。" },
+                { text: "借代", isCorrect: false, rationale: "不是用鮮花代替煙火。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「媽媽生氣的時候，就像一顆隨時會爆炸的炸彈。」這句話主要用了哪種修辭？",
+            hint: "把生氣的媽媽打比方成什麼了呢？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用『就像』把媽媽生氣的模樣比喻成炸彈。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重字義。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+        {
+            q: "「夜空中的螢火蟲，彷彿是提著小燈籠的精靈。」這句話用了什麼修辭？",
+            hint: "句子裡出現了「彷彿」，是在做什麼呢？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用『彷彿』把會發光的螢火蟲比喻成提燈籠的精靈。" },
+                { text: "摹寫", isCorrect: false, rationale: "雖然有視覺畫面，但核心技巧是打比方。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" }
+            ]
+        },
+        {
+            q: "「爺爺臉上的皺紋，像是一條條深深的溝渠。」這句話使用了哪種修辭？",
+            hint: "皺紋「像」什麼？",
+            options: [
+                { text: "譬喻", isCorrect: true, rationale: "用『像是』把臉上的皺紋比喻成溝渠。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "類疊", isCorrect: false, rationale: "雖然有『一條條』，但主要是譬喻。" }
+            ]
+        },
+
+        // --- 摹寫 ---
+        {
+            q: "「樹林裡傳來樹葉『沙沙沙』的摩擦聲。」這句話使用了哪一種修辭？",
+            hint: "「沙沙沙」是用身體的哪個器官感受到的呢？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把耳朵聽到的聲音具體寫出來，是聽覺摹寫。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重意思。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「下過雨的泥土，散發出一股清新的大自然氣息。」這句話運用了什麼修辭？",
+            hint: "泥土的氣息是用什麼器官去感受的？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把鼻子聞到的味道寫出來，是嗅覺摹寫。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" }
+            ]
+        },
+        {
+            q: "「這塊冰磚摸起來凍得我手都快麻了。」這句話主要用了哪種修辭？",
+            hint: "「凍得手發麻」是身體皮膚接觸到的感覺喔！",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "將皮膚碰觸到的冰冷感覺寫出來，是觸覺摹寫。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" },
+                { text: "誇飾", isCorrect: false, rationale: "真實感受，沒有過度誇大。" }
+            ]
+        },
+        {
+            q: "「天空綻放出紅的、黃的、紫的五顏六色煙火，十分耀眼。」這句話用了哪種修辭？",
+            hint: "「紅的、黃的、紫的」是用什麼器官去發現的呢？",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把眼睛看到的鮮豔色彩寫出來，是視覺摹寫。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" }
+            ]
+        },
+        {
+            q: "「這顆西瓜咬下去汁多味甜，嘴裡充滿了清涼的果香。」這句話使用了哪種修辭？",
+            hint: "「汁多味甜」是嘴巴嚐到的味道！",
+            options: [
+                { text: "摹寫", isCorrect: true, rationale: "把舌頭嚐到的美味形容出來，是味覺摹寫。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+
+        // --- 誇飾 ---
+        {
+            q: "「夏天的教室熱得像是一個大烤箱，我都快被烤熟了！」這句話使用了哪一種修辭？",
+            hint: "教室再熱，人真的會被「烤熟」嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意極度放大事實，強調教室非常熱的程度。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用其他詞代替。" },
+                { text: "設問", isCorrect: false, rationale: "沒有提出問題。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的覺得很熱，沒有說反話。" }
+            ]
+        },
+        {
+            q: "「我今天走了一整天的路，累得連骨頭都要散架了。」這句話運用了什麼修辭？",
+            hint: "走路再累，骨頭真的會散掉嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "用誇張的形容來表達身體極度疲勞的感覺。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把物品當作人。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有雙重字義。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有重複的字。" }
+            ]
+        },
+        {
+            q: "「排隊買限量公仔的人潮，長得都快排到外太空去了。」這句話主要用了哪種修辭？",
+            hint: "隊伍真的有可能排到外太空嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意把隊伍的長度放到最大，強調人非常多。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有相反的對比。" },
+                { text: "譬喻", isCorrect: false, rationale: "雖然誇張，但重點在放大事實，而不是單純打比方。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「他的笑聲超級大，連十公里外的人都聽得見。」這句話用了什麼修辭？",
+            hint: "人的笑聲有可能傳到十公里那麼遠嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "故意誇大聲音傳播的距離，強調笑聲的宏亮。" },
+                { text: "摹寫", isCorrect: false, rationale: "這不是真實的聲音描寫，而是誇張的想像。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" }
+            ]
+        },
+        {
+            q: "「妹妹餓壞了，她說她現在可以吞下一整隻大象。」這句話使用了哪種修辭？",
+            hint: "人的肚子真的能裝下一頭大象嗎？",
+            options: [
+                { text: "誇飾", isCorrect: true, rationale: "放大事實來強調非常飢餓的感覺。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的覺得餓，沒有說反話。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說肚子像大象。" }
+            ]
+        },
+
+        // --- 類疊 ---
+        {
+            q: "「盤子裡裝著一顆顆白白胖胖的大水餃。」這句話使用了哪一種修辭？",
+            hint: "注意看看「一顆」、「白」、「胖」這幾個字！",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "『一顆顆』、『白白胖胖』都是把相同的字重複使用。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+        {
+            q: "「郵差先生騎著機車，噗嘟噗嘟的在巷子裡穿梭。」這句話運用了什麼修辭？",
+            hint: "「噗嘟」是不是連續出現了兩次？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "連續使用『噗嘟』這個詞，增加聲音的趣味性。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用別的詞代替郵差。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「我們沿著山路，一步一步慢慢地往山頂爬去。」這句話主要用了哪種修辭？",
+            hint: "「一步」重複了兩次喔！",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "重複使用『一步』，強調爬山緩慢而堅持的過程。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「下課了，大家開開心心地跑到操場上玩耍。」這句話用了什麼修辭？",
+            hint: "原本是「開心」，字重複之後變成了什麼修辭？",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "將字疊在一起用，強調歡樂的氣氛。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏字義。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代。" }
+            ]
+        },
+        {
+            q: "「天空中飄著一朵一朵的小白雲。」這句話使用了哪種修辭？",
+            hint: "「一朵」重複了兩次！",
+            options: [
+                { text: "類疊", isCorrect: true, rationale: "重複使用量詞，讓畫面有豐富、連續的感覺。" },
+                { text: "誇飾", isCorrect: false, rationale: "真實的數量描寫，沒有誇大。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把雲當作人。" }
+            ]
+        },
+
+        // --- 設問 ---
+        {
+            q: "「樹葉為什麼會掉下來？因為秋天已經悄悄來臨了。」這句話使用了哪一種修辭？",
+            hint: "自己提出為什麼，然後立刻自己回答，這是哪一招？",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "自問自答，為了引起大家的注意而故意提問。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        {
+            q: "「這麼簡單的選擇題，你怎麼可能會答錯呢？」這句話運用了什麼修辭？",
+            hint: "這句話其實是在說：你『不可能』答錯！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "用疑問的語氣來表達肯定的意思（激問法）。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代詞。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "摹寫", isCorrect: false, rationale: "沒有感官形容。" }
+            ]
+        },
+        {
+            q: "「浩瀚的宇宙中，到底有沒有外星人存在呢？」這句話主要用了哪種修辭？",
+            hint: "提出了一個問題，把疑問留在大家的心裡讓大家去思考。",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "心中有疑問而提出問題，沒有給答案，也是設問的一種（懸問）。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重意思。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" }
+            ]
+        },
+        {
+            q: "「是誰偷偷在我的桌上放了一塊巧克力？原來是好朋友小美！」這句話用了什麼修辭？",
+            hint: "前面問問題，後面給解答，這是一問一答！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "自己提出疑問，然後接著給出解答。" },
+                { text: "感嘆", isCorrect: false, rationale: "主要句型是問答，不是純粹的驚呼。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說像什麼。" }
+            ]
+        },
+        {
+            q: "「讀書不就是為了讓自己擁有更多選擇的機會嗎？」這句話使用了哪種修辭？",
+            hint: "答案已經在問題裡面了，用問句來加強語氣喔！",
+            options: [
+                { text: "設問", isCorrect: true, rationale: "用問句的形式來強調『讀書就是為了擁有選擇機會』這件事。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把事物當作人。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+
+        // --- 映襯 ---
+        {
+            q: "「他雖然外表看起來兇巴巴的，內心卻非常溫柔善良。」這句話使用了哪一種修辭？",
+            hint: "外表的「兇」和內心的「溫柔」產生了什麼樣的關係？",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將兇惡的外表與善良的內心進行強烈的對比。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有過度放大。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" }
+            ]
+        },
+        {
+            q: "「圖書館裡安靜無聲，外面的操場卻熱鬧非凡。」這句話運用了什麼修辭？",
+            hint: "圖書館和操場的狀況是不是完全相反？",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "把安靜和熱鬧兩種相反的情境放在一起對比。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "借代", isCorrect: false, rationale: "沒有代替。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" }
+            ]
+        },
+        {
+            q: "「這件衣服看起來很樸素，價格卻是昂貴得嚇人。」這句話主要用了哪種修辭？",
+            hint: "外表的普通跟價格的昂貴形成反差！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將樸素的外觀與昂貴的價格進行對比。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的覺得貴，沒有說反話。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「雖然這顆橘子皮又厚又醜，裡面的果肉卻意外地香甜。」這句話用了什麼修辭？",
+            hint: "外表的不好看跟吃起來的美味完全不一樣！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "把外觀的缺點和內在的優點對比出來。" },
+                { text: "摹寫", isCorrect: false, rationale: "雖然有提到味道，但句型重點在於對比。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏的意思。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" }
+            ]
+        },
+        {
+            q: "「失敗雖然會帶來痛苦的淚水，卻能結出成功的甜美果實。」這句話使用了哪種修辭？",
+            hint: "失敗的「痛苦」和成功的「甜美」是對立的喔！",
+            options: [
+                { text: "映襯", isCorrect: true, rationale: "將痛苦與甜美、失敗與成功放在一起比較。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "轉化", isCorrect: false, rationale: "主要是對比，而非單純的擬人化。" }
+            ]
+        },
+
+        // --- 雙關 ---
+        {
+            q: "「媽媽切了一盤蒜頭，笑著說吃蒜頭以後數學會很會『算』。」這句話的蒜頭運用了哪種修辭？",
+            hint: "「蒜」頭的發音跟哪個字一樣呢？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用『蒜』和『算』數的同音，帶來吉祥有趣的含義。" },
+                { text: "譬喻", isCorrect: false, rationale: "不是說蒜頭像數學。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        {
+            q: "「元宵節的時候吃湯圓，代表我們一整年都能事事『圓滿』。」這句話運用了什麼修辭？",
+            hint: "湯『圓』的音跟哪個吉祥的字很像？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用湯『圓』的字音和形狀，象徵事事『圓滿』。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" },
+                { text: "借代", isCorrect: false, rationale: "沒有用湯圓代替其他東西。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+        {
+            q: "「過年吃發糕，祝爸爸媽媽今年都能大『發』財。」這句話主要用了哪種修辭？",
+            hint: "『發』糕的音跟什麼祝福語一樣？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用『發』糕和『發』財的同音，傳達過年的祝福。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有把發糕擬人化。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「考試前千萬別吃鴨蛋，免得明天考卷上也抱個『鴨蛋』回家。」這句話用了什麼修辭？",
+            hint: "考卷上的『鴨蛋』是指什麼分數呢？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用食物的『鴨蛋』和零分的『鴨蛋』形狀相似，語帶雙關。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "摹寫", isCorrect: false, rationale: "沒有感官形容。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" }
+            ]
+        },
+        {
+            q: "「考試前吃花生，希望能有好事『發生』。」這句話使用了哪種修辭？",
+            hint: "花生的『生』跟發生的『生』是不是一樣呢？",
+            options: [
+                { text: "雙關", isCorrect: true, rationale: "利用『花生』和『發生』的諧音，祈求好運氣。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大事實。" }
+            ]
+        },
+
+        // --- 感嘆 ---
+        {
+            q: "「天啊！這件玩具的價格也太貴了吧！」這句話使用了哪一種修辭？",
+            hint: "「天啊」表達了什麼樣的心情呢？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "使用了感嘆詞『天啊』，強烈表達出驚訝的情緒。" },
+                { text: "借代", isCorrect: false, rationale: "沒有代替詞。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重意思。" }
+            ]
+        },
+        {
+            q: "「耶！我們班終於拿到了大隊接力的總冠軍！」這句話運用了什麼修辭？",
+            hint: "「耶」這個字聽起來是不是很開心呢？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "用『耶！』直接抒發內心強烈的興奮和快樂。" },
+                { text: "倒反", isCorrect: false, rationale: "是真的開心，沒有說反話。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        },
+        {
+            q: "「唉！好不容易放假，外面竟然下起了傾盆大雨。」這句話主要用了哪種修辭？",
+            hint: "「唉」表達了什麼樣的情緒？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "運用『唉！』表達出失望、無奈的強烈情緒。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有放大事實。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" }
+            ]
+        },
+        {
+            q: "「哇！這名魔術師的表演真是太神奇、太不可思議了！」這句話用了什麼修辭？",
+            hint: "看到神奇的表演，忍不住發出驚呼聲！",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "使用『哇！』來表達極度讚嘆的情緒。" },
+                { text: "摹寫", isCorrect: false, rationale: "主要是抒發情緒，不是感官形容。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" }
+            ]
+        },
+        {
+            q: "「哎呀！我不小心踩到路邊的水坑，鞋子全濕了！」這句話使用了哪種修辭？",
+            hint: "「哎呀」代表發生了什麼意外的反應？",
+            options: [
+                { text: "感嘆", isCorrect: true, rationale: "用『哎呀』表達出糟糕、驚慌的情緒。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" }
+            ]
+        },
+
+        // --- 倒反 ---
+        {
+            q: "「你的動作慢得像一隻烏龜，可真是『神速』啊！」這句話使用了哪一種修辭？",
+            hint: "慢得像烏龜，怎麼會說他是神速呢？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "明明很慢，卻故意用『神速』來諷刺，這就是說反話。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有同音字。" },
+                { text: "設問", isCorrect: false, rationale: "不是問句。" },
+                { text: "借代", isCorrect: false, rationale: "沒有替代。" }
+            ]
+        },
+        {
+            q: "「你把白色的牆壁塗得黑漆漆的，真是個『大藝術家』呢！」這句話運用了什麼修辭？",
+            hint: "把牆壁弄髒了，這是在稱讚他還是生氣？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "心裡其實在責備，卻故意用稱讚的話語來表達不滿。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有把兩種情況對比。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "感嘆", isCorrect: false, rationale: "雖然有情緒，但核心技巧是反話。" }
+            ]
+        },
+        {
+            q: "「哥哥把鹽當成糖加進蛋糕裡，這味道還真是『人間美味』！」這句話主要用了哪種修辭？",
+            hint: "加了鹽的蛋糕會好吃嗎？卻說它是人間美味？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "做壞了食物卻故意說美味，語帶諷刺。" },
+                { text: "誇飾", isCorrect: false, rationale: "重點在於諷刺，而不是放大事實。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "摹寫", isCorrect: false, rationale: "不是真的在形容好吃的味道。" }
+            ]
+        },
+        {
+            q: "「外面正下著雞蛋大的冰雹，你居然說現在真是『郊遊的好天氣』。」這句話用了什麼修辭？",
+            hint: "下冰雹怎麼可能適合郊遊呢？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "故意把糟糕的天氣說成好天氣，充滿了抱怨的味道。" },
+                { text: "譬喻", isCorrect: false, rationale: "雖然有像雞蛋，但整個句子的重點是反話。" },
+                { text: "借代", isCorrect: false, rationale: "沒有代替。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有多重字義。" }
+            ]
+        },
+        {
+            q: "「你的房間地上亂到連走路的地方都沒有，真是『乾淨整潔』呀！」這句話使用了哪種修辭？",
+            hint: "地上那麼亂，說乾淨整潔是在挖苦他嗎？",
+            options: [
+                { text: "倒反", isCorrect: true, rationale: "明明很髒亂，卻故意用『乾淨』來反諷。" },
+                { text: "誇飾", isCorrect: false, rationale: "重點是反話，而非誇大。" },
+                { text: "設問", isCorrect: false, rationale: "不是問號。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比的句型。" }
+            ]
+        },
+
+        // --- 借代 ---
+        {
+            q: "「每天在馬路上指揮交通的『人民保母』，真是非常辛苦。」這句話的『人民保母』運用了哪種修辭？",
+            hint: "保護人民、指揮交通的人是哪個職業呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『人民保母』這個特徵稱呼，來代替『警察』。" },
+                { text: "轉化", isCorrect: false, rationale: "沒有擬人化。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有說警察像保母。" }
+            ]
+        },
+        {
+            q: "「班上的『夜貓子』，每天都熬夜打電動，白天總是在打瞌睡。」這裡的『夜貓子』用了什麼修辭？",
+            hint: "像貓咪一樣晚上不睡覺的人，我們稱為什麼？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『夜貓子』來代替『很晚睡覺的人』。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" },
+                { text: "誇飾", isCorrect: false, rationale: "沒有誇大。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" }
+            ]
+        },
+        {
+            q: "「我們家有兩隻可愛的『毛小孩』，每天都會陪我一起玩。」這句話運用了哪種修辭？",
+            hint: "長滿毛的『小孩』通常是指什麼動物呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『毛小孩』來代替家裡養的『寵物狗或貓』。" },
+                { text: "類疊", isCorrect: false, rationale: "沒有疊字。" },
+                { text: "雙關", isCorrect: false, rationale: "沒有隱藏的意思。" },
+                { text: "感嘆", isCorrect: false, rationale: "沒有驚嘆詞。" }
+            ]
+        },
+        {
+            q: "「他因為做了壞事，最後被警察抓進了『鐵窗』裡。」這句話的『鐵窗』用了什麼修辭？",
+            hint: "裝滿鐵窗、用來關壞人的地方是哪裡？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用監獄的特徵『鐵窗』，來代替『監獄』這個地方。" },
+                { text: "轉化", isCorrect: false, rationale: "鐵窗沒有變成別的東西。" },
+                { text: "倒反", isCorrect: false, rationale: "沒有說反話。" },
+                { text: "摹寫", isCorrect: false, rationale: "不是感官描寫。" }
+            ]
+        },
+        {
+            q: "「這個班的『智多星』又想出了一個解決問題的好辦法。」這句話使用了哪種修辭？",
+            hint: "『智多星』通常是指哪一種人呢？",
+            options: [
+                { text: "借代", isCorrect: true, rationale: "用『智多星』來代替『非常聰明、點子很多的人』。" },
+                { text: "譬喻", isCorrect: false, rationale: "沒有打比方。" },
+                { text: "設問", isCorrect: false, rationale: "沒有問號。" },
+                { text: "映襯", isCorrect: false, rationale: "沒有對比。" }
+            ]
+        }
+    ];
+
+    let currentQuizQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let hasAnswered = false;
+
+    // Fisher-Yates Shuffle 隨機打亂陣列
+    function shuffleArray(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
+    }
+
+    // 初始化介面顯示總題庫數量
+    document.getElementById('pool-size').innerText = questionPool.length;
+
+    function startGame() {
+        // 從大題庫中隨機抽取 10 題
+        const shuffledPool = shuffleArray([...questionPool]);
+        currentQuizQuestions = shuffledPool.slice(0, 10);
+        
+        currentQuestionIndex = 0;
+        score = 0;
+        
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.add('hidden');
+        document.getElementById('quiz-screen').classList.remove('hidden');
+        
+        updateScore();
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        hasAnswered = false;
+        const currentQ = currentQuizQuestions[currentQuestionIndex];
+        
+        // Update progress
+        document.getElementById('current-question-num').innerText = currentQuestionIndex + 1;
+        document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / 10) * 100}%`;
+        
+        // Set question text
+        document.getElementById('question-text').innerText = currentQ.q;
+        
+        // Reset Hint
+        const hintText = document.getElementById('hint-text');
+        hintText.innerText = currentQ.hint;
+        hintText.classList.add('hidden');
+        
+        // Reset Feedback
+        document.getElementById('feedback-area').classList.add('hidden');
+        
+        // Load Options (shuffle them too!)
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+        
+        const shuffledOptions = shuffleArray([...currentQ.options]);
+        
+        shuffledOptions.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = `w-full text-left p-4 rounded-xl border-2 border-gray-200 bg-gray-50 hover:bg-green-50 hover:border-green-300 font-bold text-gray-700 transition transform active:scale-[0.98] option-btn`;
+            btn.innerText = `${String.fromCharCode(65 + index)}. ${opt.text}`;
+            btn.onclick = () => selectAnswer(btn, opt);
+            optionsContainer.appendChild(btn);
+        });
+    }
+
+    function toggleHint() {
+        const hintText = document.getElementById('hint-text');
+        hintText.classList.toggle('hidden');
+    }
+
+    function selectAnswer(selectedBtn, optionData) {
+        if (hasAnswered) return; // Prevent multiple clicks
+        hasAnswered = true;
+
+        const allBtns = document.querySelectorAll('.option-btn');
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackRationale = document.getElementById('feedback-rationale');
+        const nextBtn = document.getElementById('next-btn');
+
+        // Disable all buttons and show styling
+        allBtns.forEach(btn => {
+            btn.classList.remove('hover:bg-green-50', 'hover:border-green-300');
+            btn.classList.add('opacity-60', 'cursor-not-allowed');
+            // If this was the correct answer, highlight it in green regardless of what user clicked
+            if (btn.innerText.includes(currentQuizQuestions[currentQuestionIndex].options.find(o => o.isCorrect).text)) {
+                btn.classList.remove('opacity-60', 'bg-gray-50', 'border-gray-200');
+                btn.classList.add('bg-green-100', 'border-green-500', 'text-green-800', 'ring-2', 'ring-green-400', 'opacity-100');
+            }
+        });
+
+        feedbackArea.classList.remove('hidden', 'bg-red-100', 'bg-green-100');
+        
+        if (optionData.isCorrect) {
+            score += 10;
+            updateScore();
+            selectedBtn.classList.remove('opacity-60');
+            // Add pop animation
+            selectedBtn.classList.add('scale-105');
+            
+            feedbackArea.classList.add('bg-green-100');
+            feedbackIcon.innerText = "🎉";
+            feedbackTitle.innerText = "答對了！太棒了！";
+            feedbackTitle.classList.add('text-green-700');
+        } else {
+            // Highlight chosen wrong answer
+            selectedBtn.classList.remove('opacity-60', 'bg-gray-50', 'border-gray-200');
+            selectedBtn.classList.add('bg-red-100', 'border-red-500', 'text-red-800', 'opacity-100');
+            
+            feedbackArea.classList.add('bg-red-100');
+            feedbackIcon.innerText = "💪";
+            feedbackTitle.innerText = "哎呀，答錯了！再接再厲！";
+            feedbackTitle.classList.add('text-red-700');
+            feedbackTitle.classList.remove('text-green-700');
+        }
+
+        feedbackRationale.innerText = optionData.rationale;
+        
+        // Change next button text if it's the last question
+        if (currentQuestionIndex === 9) {
+            nextBtn.innerText = "看總成績 🏆";
+            nextBtn.classList.replace('bg-blue-500', 'bg-purple-500');
+            nextBtn.classList.replace('hover:bg-blue-600', 'hover:bg-purple-600');
+        } else {
+            nextBtn.innerText = "下一題 ➡️";
+            nextBtn.classList.replace('bg-purple-500', 'bg-blue-500');
+            nextBtn.classList.replace('hover:bg-purple-600', 'hover:bg-blue-600');
+        }
+    }
+
+    function nextQuestion() {
+        if (currentQuestionIndex < 9) {
+            currentQuestionIndex++;
+            loadQuestion();
+        } else {
+            showResultScreen();
+        }
+    }
+
+    function updateScore() {
+        document.getElementById('score-display').innerText = score;
+    }
+
+    function showResultScreen() {
+        document.getElementById('quiz-screen').classList.add('hidden');
+        document.getElementById('result-screen').classList.remove('hidden');
+        
+        const finalScoreDisplay = document.getElementById('final-score');
+        const resultMessage = document.getElementById('result-message');
+        const resultEmoji = document.getElementById('result-emoji');
+        
+        finalScoreDisplay.innerText = `${score} 分`;
+        
+        if (score === 100) {
+            resultEmoji.innerText = "👑";
+            resultMessage.innerText = "太神啦！修辭大師就是你！全對！";
+            resultMessage.className = "text-xl font-bold text-yellow-600 mb-8";
+        } else if (score >= 80) {
+            resultEmoji.innerText = "🌟";
+            resultMessage.innerText = "表現非常棒！你已經掌握大部分的修辭囉！";
+            resultMessage.className = "text-xl font-bold text-green-600 mb-8";
+        } else if (score >= 60) {
+            resultEmoji.innerText = "👍";
+            resultMessage.innerText = "不錯喔！多練習幾次一定會更厲害！";
+            resultMessage.className = "text-xl font-bold text-blue-600 mb-8";
+        } else {
+            resultEmoji.innerText = "📚";
+            resultMessage.innerText = "加油加油！看看小提示，再挑戰一次吧！";
+            resultMessage.className = "text-xl font-bold text-gray-600 mb-8";
+        }
+    }
+
+    function resetGame() {
+        // Just call startGame again to draw a new set of 10 questions
+        startGame();
+    }
+</script>
+</body>
+</html>
